@@ -13,7 +13,7 @@ from state import get_state
 logger = logging.getLogger(__name__)
 
 WELCOME_TEXT = """
-🍌✨ *Привет! Я NanoBanana — бот-генератор изображений на базе Google Gemini!*
+🍌✨ *Привет! Я Snowie — бот-генератор изображений на базе AI!*
 
 *Что я умею:*
 • 🖼 Генерировать картинки по текстовому описанию
