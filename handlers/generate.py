@@ -107,10 +107,11 @@ def _friendly_error(raw: str) -> str:
             "🚫 Запрос заблокирован фильтрами безопасности.\n"
             "Попробуй переформулировать промпт."
         )
-    if "quota" in raw_lower or "rate" in raw_lower or "429" in raw_lower:
+    if "quota" in raw_lower or "rate" in raw_lower or "429" in raw_lower or "resource_exhausted" in raw_lower:
         return (
-            "⏱ Превышен лимит запросов.\n"
-            "Подожди немного и попробуй снова."
+            "⏱ Превышен лимит запросов к API (429).\n\n"
+            "Уже пробовала повторить 3 раза — не получилось.\n"
+            "Подожди 1-2 минуты и попробуй снова."
         )
     if "image input" in raw_lower or "не поддерживает входные" in raw_lower:
         return (

@@ -3,6 +3,7 @@ Gemini API service wrapper.
 Handles both text-to-image and image-to-image generation.
 """
 
+import asyncio
 import io
 import logging
 from typing import Optional
@@ -17,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 # Configure Gemini API key once at import time
 genai.configure(api_key=GOOGLE_API_KEY)
+
+# Retry config for 429 rate-limit errors
+_MAX_RETRIES = 3
+_RETRY_DELAYS = [5, 15, 30]   # seconds between retries
 
 
 class GeminiService:
@@ -81,7 +86,7 @@ class GeminiService:
         model_id: str = "gemini-2.5-flash-image",
         reference_image_bytes: Optional[bytes] = None,
     ) -> tuple[bytes, str]:
-        """Call any Gemini image generation model (supports image input)."""
+        """Call any Gemini image generation model with auto-retry on 429."""
         model = genai.GenerativeModel(model_id)
 
         ar_hint = self._aspect_ratio_hint(aspect_ratio)
@@ -89,30 +94,52 @@ class GeminiService:
 
         contents: list = []
         if reference_image_bytes:
-            # Resize reference to keep within API limits
             ref_image = self._resize_image(reference_image_bytes)
             contents.append(ref_image)
-
         contents.append(full_prompt)
 
-        response: GenerateContentResponse = await model.generate_content_async(
-            contents,
-        )
-
-        return self._extract_image_from_response(response)
+        last_error: Exception = RuntimeError("Unknown error")
+        for attempt, delay in enumerate([0] + _RETRY_DELAYS, start=0):
+            if delay:
+                logger.info(f"Rate limit hit, retrying in {delay}s (attempt {attempt}/{_MAX_RETRIES})...")
+                await asyncio.sleep(delay)
+            try:
+                response: GenerateContentResponse = await model.generate_content_async(contents)
+                return self._extract_image_from_response(response)
+            except Exception as e:
+                last_error = e
+                if _is_rate_limit(e) and attempt < _MAX_RETRIES:
+                    continue
+                raise
+        raise last_error
 
     async def _generate_imagen(
         self, prompt: str, aspect_ratio: str, model_id: str = "imagen-4.0-generate-001"
     ) -> tuple[bytes, str]:
-        """Call Imagen 4 (or any Imagen model) for text-to-image generation."""
+        """Call Imagen 4 (or any Imagen model) with auto-retry on 429."""
         imagen_model = genai.ImageGenerationModel(model_id)
-        result = await imagen_model.generate_images_async(
-            prompt=prompt,
-            number_of_images=1,
-            aspect_ratio=aspect_ratio,
-            safety_filter_level="block_only_high",
-            person_generation="allow_adult",
-        )
+
+        last_error: Exception = RuntimeError("Unknown error")
+        for attempt, delay in enumerate([0] + _RETRY_DELAYS, start=0):
+            if delay:
+                logger.info(f"Rate limit hit, retrying Imagen in {delay}s (attempt {attempt}/{_MAX_RETRIES})...")
+                await asyncio.sleep(delay)
+            try:
+                result = await imagen_model.generate_images_async(
+                    prompt=prompt,
+                    number_of_images=1,
+                    aspect_ratio=aspect_ratio,
+                    safety_filter_level="block_only_high",
+                    person_generation="allow_adult",
+                )
+                break
+            except Exception as e:
+                last_error = e
+                if _is_rate_limit(e) and attempt < _MAX_RETRIES:
+                    continue
+                raise
+        else:
+            raise last_error
 
         if not result.images:
             raise RuntimeError(
@@ -158,3 +185,9 @@ class GeminiService:
             "4:3":  "Generate a 4:3 image.",
         }
         return hints.get(aspect_ratio, "")
+
+
+def _is_rate_limit(exc: Exception) -> bool:
+    """Return True if the exception is a 429 / quota-exceeded error."""
+    msg = str(exc).lower()
+    return any(kw in msg for kw in ("429", "resource_exhausted", "quota", "rate limit", "too many"))
