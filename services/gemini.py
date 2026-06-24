@@ -41,9 +41,9 @@ class GeminiService:
         model_info = MODELS[model_id]
 
         if model_info["provider"] == "imagen":
-            return await self._generate_imagen(prompt, aspect_ratio)
+            return await self._generate_imagen(prompt, aspect_ratio, model_id=model_id)
         else:
-            return await self._generate_gemini_flash(prompt, aspect_ratio)
+            return await self._generate_gemini_flash(prompt, aspect_ratio, model_id=model_id)
 
     # ── Image-to-image ────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ class GeminiService:
                 "Выбери Gemini 2.0 Flash для работы с фото-референсом."
             )
         return await self._generate_gemini_flash(
-            prompt, aspect_ratio, reference_image_bytes=reference_image_bytes
+            prompt, aspect_ratio, model_id=model_id, reference_image_bytes=reference_image_bytes
         )
 
     # ── Internal helpers ──────────────────────────────────────────────────────
@@ -78,12 +78,11 @@ class GeminiService:
         self,
         prompt: str,
         aspect_ratio: str,
+        model_id: str = "gemini-2.5-flash-image",
         reference_image_bytes: Optional[bytes] = None,
     ) -> tuple[bytes, str]:
-        """Call Gemini 2.0 Flash image generation (supports image input)."""
-        model = genai.GenerativeModel(
-            "gemini-2.0-flash-preview-image-generation"
-        )
+        """Call any Gemini image generation model (supports image input)."""
+        model = genai.GenerativeModel(model_id)
 
         ar_hint = self._aspect_ratio_hint(aspect_ratio)
         full_prompt = f"{prompt}\n\n{ar_hint}" if ar_hint else prompt
@@ -98,20 +97,15 @@ class GeminiService:
 
         response: GenerateContentResponse = await model.generate_content_async(
             contents,
-            generation_config=genai.GenerationConfig(
-                response_modalities=["IMAGE", "TEXT"],
-            ),
         )
 
         return self._extract_image_from_response(response)
 
     async def _generate_imagen(
-        self, prompt: str, aspect_ratio: str
+        self, prompt: str, aspect_ratio: str, model_id: str = "imagen-4.0-generate-001"
     ) -> tuple[bytes, str]:
-        """Call Imagen 3 text-to-image."""
-        imagen_model = genai.ImageGenerationModel(
-            "imagen-3.0-generate-002"
-        )
+        """Call Imagen 4 (or any Imagen model) for text-to-image generation."""
+        imagen_model = genai.ImageGenerationModel(model_id)
         result = await imagen_model.generate_images_async(
             prompt=prompt,
             number_of_images=1,

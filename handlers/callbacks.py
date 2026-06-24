@@ -30,10 +30,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         set_model(chat_id, model_id)
         model_info = MODELS[model_id]
+        paid_note = (
+            "\n\n⚠️ *Платная модель* — убедись что в Google AI Studio включён биллинг."
+            if model_info.get("paid") else ""
+        )
         await query.edit_message_text(
             f"✅ *Модель выбрана:* {model_info['label']}\n\n"
             f"_{model_info['description']}_\n\n"
-            f"{'📸 Поддерживает фото-референс!' if model_info['supports_image_input'] else '📝 Только текстовая генерация'}",
+            f"{'📸 Поддерживает фото-референс!' if model_info['supports_image_input'] else '📝 Только текст→картинка'}"
+            f"{paid_note}",
             parse_mode="Markdown",
         )
 

@@ -19,21 +19,46 @@ PORT: int = int(os.getenv("PORT", "8080"))
 
 # ── Available models ──────────────────────────────────────
 MODELS: dict[str, dict] = {
-    "gemini-2.0-flash-preview-image-generation": {
-        "label": "✨ Gemini 2.0 Flash (Image Gen)",
-        "description": "Быстрая генерация + редактирование по референсу",
+    # ── Nano Banana (Gemini Image) ─────────────────────────
+    "gemini-2.5-flash-image": {
+        "label": "🍌 Nano Banana (FREE)",
+        "description": "Базовая модель — быстрая генерация и редактирование по фото",
         "supports_image_input": True,
         "provider": "gemini",
+        "paid": False,
     },
-    "imagen-3.0-generate-002": {
-        "label": "🎨 Imagen 3",
-        "description": "Высококачественная генерация (только текст)",
+    "gemini-3.1-flash-image": {
+        "label": "🍌🍌 Nano Banana 2 (Paid)",
+        "description": "Gemini 3.1 Flash Image — визуальный интеллект профи-уровня",
+        "supports_image_input": True,
+        "provider": "gemini",
+        "paid": True,
+    },
+    "gemini-3-pro-image": {
+        "label": "👑 Nano Banana Pro (Paid)",
+        "description": "Gemini 3 Pro Image — топовое качество генерации",
+        "supports_image_input": True,
+        "provider": "gemini",
+        "paid": True,
+    },
+    # ── Imagen 4 ───────────────────────────────────────────
+    "imagen-4.0-generate-001": {
+        "label": "🎨 Imagen 4 (Paid)",
+        "description": "Лучший рендеринг текста и высокое качество (только текст→фото)",
         "supports_image_input": False,
         "provider": "imagen",
+        "paid": True,
+    },
+    "imagen-4.0-ultra-generate-001": {
+        "label": "💎 Imagen 4 Ultra (Paid)",
+        "description": "Максимальное качество Imagen — для сложных сцен (только текст→фото)",
+        "supports_image_input": False,
+        "provider": "imagen",
+        "paid": True,
     },
 }
 
-DEFAULT_MODEL: str = "gemini-2.0-flash-preview-image-generation"
+DEFAULT_MODEL: str = "gemini-2.5-flash-image"
 
 # ── Aspect ratios ─────────────────────────────────────────
 ASPECT_RATIOS: dict[str, dict] = {
